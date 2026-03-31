@@ -10,4 +10,4 @@
 - To ensure temporary and isolated room-based access control.
 - To implement automatic expiry and cleanup mechanisms.
 - To build a lightweight and accessible web-based interface.
-
+- To apply appropiate security mechanisms to ensure secure file sharing and storing.
