@@ -12,6 +12,9 @@ app.secret_key = 'diddy_blud_managment_system'
 def home_page():
     return render_template('index.html')
 
+@app.route('/test', methods = ['GET'])
+def next_stage():
+    return render_template('test.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -31,7 +34,7 @@ def signup():
             )
             conn.commit()
             flash('Account created successfully!', 'success')
-            return redirect(url_for('signup'))
+            return redirect(url_for('login'))
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
             flash('Username or email already exists.', 'error')
@@ -41,6 +44,32 @@ def signup():
             conn.close()
 
     return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        password_hash1 = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT password_hash FROM users WHERE username = %s", (username,))
+            result = cur.fetchone()
+
+            if result is None or not bcrypt.checkpw(password.encode('utf-8'), result[0].encode('utf-8')):
+                flash('Wrong username or password.', 'error')
+                return redirect(url_for('login'))
+            else:
+                flash(f'Account was logged in less gooo! Welcome {username}!', 'success')
+                return redirect(url_for('next_stage'))
+        finally:
+            cur.close()
+            conn.close()
+
+    return render_template('login.html')
 
 
 if __name__ == '__main__':
