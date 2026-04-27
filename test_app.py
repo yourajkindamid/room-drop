@@ -1,12 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash,session,abort
 import psycopg2
 import bcrypt
+import string
+import secrets
 
 DATABASE_URL = "postgresql://postgres.fzuoyaxlwwsanlsicmoo:hosh_me_aao_abhijeet_69@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
-
 app = Flask(__name__)
 app.secret_key = 'diddy_blud_managment_system'
-
 
 @app.route('/', methods=['GET'])
 def home_page():
@@ -22,11 +22,9 @@ def signup():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         try:
             cur.execute(
                 "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
@@ -51,26 +49,60 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        password_hash1 = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+
         try:
-            cur.execute("SELECT password_hash FROM users WHERE username = %s", (username,))
+            cur.execute("SELECT id, password_hash FROM users WHERE username = %s", (username,))
             result = cur.fetchone()
 
-            if result is None or not bcrypt.checkpw(password.encode('utf-8'), result[0].encode('utf-8')):
+            if result is None:
                 flash('Wrong username or password.', 'error')
                 return redirect(url_for('login'))
-            else:
-                flash(f'Account was logged in less gooo! Welcome {username}!', 'success')
-                return redirect(url_for('next_stage'))
+
+            user_id, stored_hash = result
+
+            if not bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
+                flash('Wrong username or password.', 'error')
+                return redirect(url_for('login'))
+
+            session['user_id'] = user_id
+            session['username'] = username
+            session['logged_in'] = True
+
+            flash(f'Welcome {username}!', 'success')
+            return redirect(url_for('next_stage'))
+
         finally:
             cur.close()
             conn.close()
 
     return render_template('login.html')
 
+@app.route('/room/<r_id>',methods=['GET'])
+def room(r_id):
+    return
+@app.route('/create-room', methods=['POST'])
+def create_room():
+    data = request.get_json()
+    nickname = data.get('nickname')
+    room_name = data.get('room_name')
+    characters = string.ascii_letters + string.digits
+    room_id = ''.join(secrets.choice(characters) for _ in range(8))
+    hashed_room_id=bcrypt.hashpw(room_id.encode('utf-8'), bcrypt.gensalt())
+    hashed_room_id = hashed_room_id.decode('utf-8')[-15:]
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+    try:
+        owner_user_id = session.get('user_id') 
+        cur.execute("insert into rooms (room_id, room_name, owner_user_id, expires_at) values (%s, %s, %s, now()+ interval '45 minutes')", (room_id, room_name, owner_user_id))
+        conn.commit()
+    except Exception as e:
+        abort(500)
+    finally:
+        cur.close()
+        conn.close()
+    return url_for('room',r_id=hashed_room_id)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
