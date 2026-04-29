@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoomDrop - Room</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Figtree', sans-serif;
+    }
+
+    :root {
+      --bg: #f4efe6;
+      --surface: #ffffff;
+      --ink: #1a1a1a;
+      --muted: #6b6358;
+      --border: #e4ddd0;
+      --red: #D1470B;
+      --orange: #E97700;
+      --yellow: #FFB703;
+      --sky: #8ECAE6;
+      --blue: #2671BC;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    nav {
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+    }
+
+    .logo {
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 1.3rem;
+    }
+
+    .logo span {
+      color: var(--red);
+    }
+
+    .room-meta {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      gap: 1.2rem;
+      padding: 1.5rem;
+      height: calc(100vh - 80px);
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1rem;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    /* LEFT USERS PANEL */
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      overflow-y: auto;
+    }
+
+    .user {
+      padding: 0.8rem;
+      border-radius: 12px;
+      background: var(--bg);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    /* CENTER CHAT */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      padding-right: 0.3rem;
+      margin-bottom: 1rem;
+    }
+
+    .message {
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      max-width: 75%;
+      font-size: 0.92rem;
+    }
+
+    .message.received {
+      background: var(--bg);
+      align-self: flex-start;
+    }
+
+    .message.sent {
+      background: var(--blue);
+      color: white;
+      align-self: flex-end;
+    }
+
+    .chat-input-container {
+      display: flex;
+      gap: 0.7rem;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+      font-size: 0.95rem;
+    }
+
+    .send-btn {
+      border: none;
+      background: var(--blue);
+      color: white;
+      padding: 0.9rem 1.3rem;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* RIGHT FILE PANEL */
+    .upload-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      overflow-y: auto;
+    }
+
+    .file {
+      padding: 0.9rem;
+      border-radius: 12px;
+      background: var(--bg);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 1000px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="logo">Room<span>Drop</span></a>
+    <div class="room-meta">
+      Room ID: {{ room_id }}
+    </div>
+  </nav>
+
+  <div class="main-layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="panel">
+      <div class="panel-title">Connected Users</div>
+
+      <div class="user-list" id="userList">
+        <div class="user">Raffay</div>
+        <div class="user">Guest_42</div>
+      </div>
+    </div>
+
+    <!-- CENTER CHAT -->
+    <div class="panel">
+      <div class="panel-title">Room Chat</div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="message received">Hello everyone 👋</div>
+        <div class="message sent">Hey, joined just now.</div>
+      </div>
+
+      <div class="chat-input-container">
+        <input type="text" class="chat-input" placeholder="Type message...">
+        <button class="send-btn">Send</button>
+      </div>
+    </div>
+
+    <!-- RIGHT FILES -->
+    <div class="panel">
+      <div class="panel-title">Files</div>
+
+      <button class="upload-btn">Upload File</button>
+
+      <div class="file-list">
+        <div class="file">report.pdf</div>
+        <div class="file">notes.zip</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

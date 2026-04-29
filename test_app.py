@@ -78,10 +78,6 @@ def login():
             conn.close()
 
     return render_template('login.html')
-
-@app.route('/room/<r_id>',methods=['GET'])
-def room(r_id):
-    return
 @app.route('/create-room', methods=['POST'])
 def create_room():
     data = request.get_json()
@@ -89,8 +85,6 @@ def create_room():
     room_name = data.get('room_name')
     characters = string.ascii_letters + string.digits
     room_id = ''.join(secrets.choice(characters) for _ in range(8))
-    hashed_room_id=bcrypt.hashpw(room_id.encode('utf-8'), bcrypt.gensalt())
-    hashed_room_id = hashed_room_id.decode('utf-8')[-15:]
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     try:
@@ -102,7 +96,24 @@ def create_room():
     finally:
         cur.close()
         conn.close()
-    return url_for('room',r_id=hashed_room_id)
+    return url_for('room',r_id=room_id)
+@app.route('/room/<r_id>')
+def room(r_id):
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
 
+    try:
+        cur.execute("select room_name, expires_at from rooms where room_id = %s and expires_at > now()", (r_id,))
+
+        room = cur.fetchone()
+
+        if room is None:
+            abort(404)
+
+        return render_template('room.html', room_id=r_id)
+
+    finally:
+        cur.close()
+        conn.close()
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
