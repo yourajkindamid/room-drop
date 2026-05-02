@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — RoomDrop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #f4efe6;
+      --surface:    #ffffff;
+      --ink:        #1a1a1a;
+      --muted:      #6b6358;
+      --border:     #e4ddd0;
+      --red:        #D1470B;
+      --orange:     #E97700;
+      --yellow:     #FFB703;
+      --sky:        #8ECAE6;
+      --blue:       #2671BC;
+    }
+
+
+    body {
+      font-family: 'Figtree', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 3rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .logo span { color: var(--red); }
+    .nav-actions { display: flex; gap: 0.6rem; align-items: center; }
+
+
+    .btn {
+      font-family: 'Figtree', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.6rem 1.3rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--ink);
+    }
+    .btn-ghost:hover { background: var(--ink); color: var(--bg); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1f5ea0; }
+    .btn-orange { background: var(--red); color: #fff; }
+    .btn-orange:hover { background: #b23a07; }
+    .btn-lg { padding: 0.9rem 2rem; font-size: 0.95rem; }
+
+
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 3rem;
+    }
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 0.8rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.8rem;
+    }
+    .section-desc {
+      color: var(--muted);
+      max-width: 520px;
+      font-size: 0.98rem;
+    }
+
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.8rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .step-card:hover { transform: translateY(-4px); border-color: var(--blue); }
+
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 3rem;
+      margin-top: 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    footer a { color: var(--muted); text-decoration: none; margin-left: 1.5rem; }
+    footer a:hover { color: var(--ink); }
+
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,26,0.5);
+      backdrop-filter: blur(3px);
+      z-index: 200;
+      display: none;
+      place-items: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: grid; }
+    .modal {
+      background: var(--surface);
+      border-radius: 20px;
+      width: min(440px, 100%);
+      padding: 2.2rem;
+      position: relative;
+      animation: pop 0.2s ease;
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.6rem; }
+    .form-group { margin-bottom: 1rem; }
+    label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--ink);
+      font-family: 'Figtree', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus { border-color: var(--blue); }
+    .modal-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+
+    .hero-tag {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--ink);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+
+
+    .dash-hero {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 3rem 2.5rem;
+    }
+    .dash-hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .dash-greeting h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+    .dash-greeting h1 .hl-red  { color: var(--red); }
+    .dash-greeting h1 .hl-blue { color: var(--blue); }
+    .dash-greeting p { color: var(--muted); font-size: 0.98rem; }
+    .dash-hero-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.2rem;
+      margin-top: 2.5rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.6rem 1.8rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .stat-card:hover { transform: translateY(-3px); border-color: var(--blue); }
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.7rem;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.35rem;
+    }
+
+    
+    .stat-card:nth-child(1) .stat-value { color: var(--blue); }
+    .stat-card:nth-child(2) .stat-value { color: var(--red); }
+    .stat-card:nth-child(3) .stat-value { color: var(--orange); }
+
+
+    
+    .list-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .list-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+    }
+    .badge-active  { background: #e6f4ec; color: #1a7a40; }
+    .badge-expired { background: #fce8e0; color: var(--red); }
+
+
+    .room-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .room-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem 1.6rem;
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .room-card:hover { transform: translateY(-2px); border-color: var(--blue); }
+    .room-card.expired {
+      opacity: 0.55;
+      pointer-events: none; 
+    }
+    .room-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .room-icon-blue   { background: #dbeeff; }
+    .room-icon-orange { background: #ffecd9; }
+    .room-icon-red    { background: #fce8e0; }
+    .room-icon-yellow { background: #fff8db; }
+
+    .room-info { flex: 1; min-width: 0; }
+    .room-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .room-meta { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+
+    .room-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+
+    .my-rooms-box {
+      background: var(--blue);
+      border-radius: 18px;
+      padding: 1.8rem 2rem;
+      color: #fff;
+      margin-bottom: 2.5rem;
+    }
+    .my-rooms-box .section-label { color: var(--yellow); }
+    .my-rooms-box .list-title { color: #fff; font-size: 1.25rem; margin-bottom: 0.3rem; }
+    .my-rooms-box p { font-size: 0.88rem; opacity: 0.85; margin-bottom: 1.2rem; }
+    .my-rooms-box .badge-active { background: rgba(255,255,255,0.2); color: #fff; }
+
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 3rem 0;
+    }
+
+
+    @media (max-width: 860px) {
+      nav { padding: 1rem 1.5rem; }
+      .dash-hero { padding: 2rem 1.5rem 1.8rem; }
+      .section { padding: 2.5rem 1.5rem; }
+      .room-card { flex-wrap: wrap; }
+      .room-actions { width: 100%; justify-content: flex-end; }
+      footer { padding: 2rem 1.5rem; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+
+  <nav>
+    <a href="/" class="logo">Room<span>Drop</span></a>
+    <div class="nav-actions">
+      <a href="/profile" class="btn btn-ghost" title="View Profile">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+        Profile
+      </a>
+      <button class="btn btn-orange" onclick="openModal('createModal')">+ New Room</button>
+    </div>
+  </nav>
+
+
+  <div class="dash-hero">
+    <div class="dash-hero-inner">
+      <div class="dash-greeting">
+        <span class="hero-tag">Welcome back</span>
+        <h1>Hey, <span class="hl-red">{{ name }}</span></h1>
+        <p>Here's everything happening across your rooms today.</p>
+      </div>
+      <div class="dash-hero-actions">
+        <button class="btn btn-primary btn-lg" onclick="openModal('createModal')">Create a Room</button>
+        <button class="btn btn-ghost btn-lg" onclick="openModal('joinModal')">Join a Room</button>
+      </div>
+    </div>
+  </div>
+
+
+  <main class="section" style="padding-top: 3rem;">
+
+
+    <div class="section-label">// your stats</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Hours Logged</div>
+        <div class="stat-value">do we actually count this?</div>
+        <div class="stat-sub">across all sessions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">My Rooms</div>
+        <div class="stat-value">- we dont keep a track of this (for now) -</div>
+        <div class="stat-sub">rooms created by you</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Files Shared</div>
+        <div class="stat-value">- no idea lol -</div>
+        <div class="stat-sub">total across all rooms</div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+
+    <div class="my-rooms-box">
+      <div class="section-label"> my rooms 😖</div>
+      <div class="list-title">Rooms you own</div>
+      <p>These are the rooms you created. These are all just random sorry</p>
+
+      <div class="room-list">
+        <div class="room-card" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); color:#fff;">
+          <div class="room-icon room-icon-blue" style="background:rgba(255,255,255,0.2);">📁</div>
+          <div class="room-info">
+            <div class="room-name">gill theta</div>
+            <div class="room-meta" style="color:rgba(255,255,255,0.7);">ID: nova-3214 · Expires in 2 h</div>
+          </div>
+          <div class="room-actions">
+            <span class="badge badge-active" style="background:rgba(255,255,255,0.2);color:#fff;">Active</span>
+            <a href="/room/nova-3214" class="btn btn-ghost" style="border-color:rgba(255,255,255,0.4);color:#fff;">Open →</a>
+          </div>
+        </div>
+
+        <div class="room-card" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); color:#fff;">
+          <div class="room-icon room-icon-yellow" style="background:rgba(255,255,255,0.2);">🗂️</div>
+          <div class="room-info">
+            <div class="room-name">malik fortnite</div>
+            <div class="room-meta" style="color:rgba(255,255,255,0.7);">ID: delta-7891 · Expires in 5 h</div>
+          </div>
+          <div class="room-actions">
+            <span class="badge badge-active" style="background:rgba(255,255,255,0.2);color:#fff;">Active</span>
+            <a href="/room/delta-7891" class="btn btn-ghost" style="border-color:rgba(255,255,255,0.4);color:#fff;">Open →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="list-header">
+      <div>
+        <div class="section-label">// active rooms</div>
+        <div class="list-title">Active Rooms <span class="badge badge-active" style="margin-left:0.5rem;">3 Live</span></div>
+      </div>
+      <button class="btn btn-ghost" onclick="openModal('joinModal')">+ Join Room</button>
+    </div>
+
+    
+    <div class="room-list" style="margin-bottom: 2.5rem;">
+
+      <div class="room-card">
+        <div class="room-icon room-icon-blue">📁</div>
+        <div class="room-info">
+          <div class="room-name">FAKEEE ROOOM</div>
+          <div class="room-meta">ID: nova-3214 · Expires in 2 h · 4 members</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-active">Active</span>
+          <a href="/room/nova-3214" class="btn btn-primary">Open →</a>
+        </div>
+      </div>
+
+      <div class="room-card">
+        <div class="room-icon room-icon-orange">🎨</div>
+        <div class="room-info">
+          <div class="room-name">FAKEEE ROOOOOM</div>
+          <div class="room-meta">ID: delta-7891 · Expires in 5 h · 2 members</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-active">Active</span>
+          <a href="/room/delta-7891" class="btn btn-primary">Open →</a>
+        </div>
+      </div>
+
+      <div class="room-card">
+        <div class="room-icon room-icon-yellow">📸</div>
+        <div class="room-info">
+          <div class="room-name">FAKEEEE ROOMMMM</div>
+          <div class="room-meta">ID: echo-5512 · Expires in 18 h · 7 members</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-active">Active</span>
+          <a href="/room/echo-5512" class="btn btn-primary">Open →</a>
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="section-divider">
+
+
+    <div class="list-header">
+      <div>
+        <div class="section-label">// history</div>
+        <div class="list-title">Past Rooms <span class="badge badge-expired" style="margin-left:0.5rem;">Expired</span></div>
+      </div>
+    </div>
+
+
+
+    <div class="room-list">
+
+      <div class="room-card expired">
+        <div class="room-icon room-icon-red">🗃️</div>
+        <div class="room-info">
+          <div class="room-name">HELLOOOOO</div>
+          <div class="room-meta">ID: foxt-1102 · Expired Apr 28 · 3 members</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-expired">Expired</span>
+        </div>
+      </div>
+
+      <div class="room-card expired">
+        <div class="room-icon room-icon-blue">🧪</div>
+        <div class="room-info">
+          <div class="room-name">TestingGGGG</div>
+          <div class="room-meta">ID: kilo-9934 · Expired Apr 25 · 1 member</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-expired">Expired</span>
+        </div>
+      </div>
+
+      <div class="room-card expired">
+        <div class="room-icon room-icon-orange">📊</div>
+        <div class="room-info">
+          <div class="room-name">Analytics Report</div>
+          <div class="room-meta">ID: mike-4470 · Expired Apr 20 · 5 members</div>
+        </div>
+        <div class="room-actions">
+          <span class="badge badge-expired">Expired</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+
+
+  <footer>
+    <a href="/" class="logo" style="font-size:1rem">Room<span>Drop</span></a>
+    <div>Private file sharing, built simple.</div>
+    <div>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">GitHub</a>
+    </div>
+  </footer>
+
+
+  <div class="overlay" id="createModal" onclick="closeModalOnBg(event,'createModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('createModal')">✕</button>
+      <div class="modal-title">Create a Room</div>
+      <div class="modal-sub">A secure Room ID will be generated automatically.</div>
+      <div class="form-group">
+        <label>Your Nickname (Required)</label>
+        <input type="text" id="creatorNickname" placeholder="e.g. Maverick"/>
+      </div>
+      <div class="form-group">
+        <label>Room Name (Required)</label>
+        <input type="text" id="roomName" placeholder="e.g. Project Assets, Photos…"/>
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%" onclick="submitCreateRoom()">Create Room →</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="joinModal" onclick="closeModalOnBg(event,'joinModal')">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('joinModal')">✕</button>
+      <div class="modal-title">Join a Room</div>
+      <div class="modal-sub">Enter the Room ID shared with you to access files.</div>
+      <div class="form-group">
+        <label>Room ID</label>
+        <input type="text" id="joinRoomId" placeholder="e.g. nova-3214"/>
+      </div>
+      <button class="btn btn-primary btn-lg" style="width:100%" onclick="submitJoinRoom()">Join Room →</button>
+    </div>
+  </div>
+
+
+  
+  <script>
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+    function closeModalOnBg(e, id) {
+      if (e.target === document.getElementById(id)) closeModal(id);
+    }
+
+    async function submitCreateRoom() {
+      const nickname = document.getElementById('creatorNickname').value.trim();
+      const roomName  = document.getElementById('roomName').value.trim();
+      if (!nickname) { alert("Please enter a nickname so others know who you are."); return; }
+      if (!roomName)  { alert("Please enter a Room Name."); return; }
+
+      const btn = document.querySelector('#createModal .btn-primary');
+      const originalText = btn.innerText;
+      btn.innerText = "Creating...";
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/create-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname, room_name: roomName })
+        });
+        if (response.ok) {
+          const targetUrl = await response.text();
+          window.location.href = targetUrl;
+        } else {
+          alert("Failed to create room. Server returned an error.");
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        console.error("Error creating room:", err);
+        alert("Network error occurred.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    function submitJoinRoom() {
+      const roomId = document.getElementById('joinRoomId').value.trim();
+      if (!roomId) return;
+      window.location.href = '/room/' + roomId;
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') ['createModal','joinModal'].forEach(closeModal);
+    });
+  </script>
+
+</body>
+</html>

@@ -12,9 +12,31 @@ app.secret_key = 'diddy_blud_managment_system'
 def home_page():
     return render_template('index.html')
 
-@app.route('/test', methods = ['GET'])
-def next_stage():
-    return render_template('test.html')
+@app.route('/dashboard', methods = ['GET'])
+def dashboard_render():
+
+    user_name = session['username']
+    context = {
+        "name": user_name,
+    }
+    return render_template('dashboard.html', **context)
+
+@app.route('/profile', methods = ['GET'])
+def profile_render():
+
+    user_name = session['username']
+    
+    conn = psycopg2.connect(DATABASE_URL)
+    cur=conn.cursor()
+
+    cur.execute("select email from users where username = %s", (user_name,))
+    user_email = cur.fetchone()
+    context = {
+        "name": user_name,
+        "email": user_email
+    }
+
+    return render_template('profile.html', **context)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -71,7 +93,7 @@ def login():
             session['logged_in'] = True
 
             flash(f'Welcome {username}!', 'success')
-            return redirect(url_for('next_stage'))
+            return redirect(url_for('dashboard_render'))
 
         finally:
             cur.close()

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile — RoomDrop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+
+    :root {
+      --bg:         #f4efe6;
+      --surface:    #ffffff;
+      --ink:        #1a1a1a;
+      --muted:      #6b6358;
+      --border:     #e4ddd0;
+      --red:        #D1470B;
+      --orange:     #E97700;
+      --yellow:     #FFB703;
+      --sky:        #8ECAE6;
+      --blue:       #2671BC;
+    }
+
+
+    body {
+      font-family: 'Figtree', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 3rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .logo span { color: var(--red); }
+    .nav-actions { display: flex; gap: 0.6rem; align-items: center; }
+
+    .btn {
+      font-family: 'Figtree', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.6rem 1.3rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--ink);
+    }
+    .btn-ghost:hover { background: var(--ink); color: var(--bg); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1f5ea0; }
+    .btn-orange { background: var(--red); color: #fff; }
+    .btn-orange:hover { background: #b23a07; }
+    .btn-lg { padding: 0.9rem 2rem; font-size: 0.95rem; }
+    .btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+    }
+    .btn-danger:hover { background: var(--red); color: #fff; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 5rem 3rem;
+    }
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 0.8rem;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+    label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--ink);
+      font-family: 'Figtree', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="email"]:focus,
+    input[type="password"]:focus { border-color: var(--blue); }
+
+    input[readonly] {
+      opacity: 0.75;
+      cursor: default;
+    }
+    input[readonly]:focus { border-color: var(--border); }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.8rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .step-card:hover { border-color: var(--blue); }
+    .step-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .step-desc {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 3rem;
+      margin-top: 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    footer a { color: var(--muted); text-decoration: none; margin-left: 1.5rem; }
+    footer a:hover { color: var(--ink); }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,26,26,0.5);
+      backdrop-filter: blur(3px);
+      z-index: 200;
+      display: none;
+      place-items: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: grid; }
+    .modal {
+      background: var(--surface);
+      border-radius: 20px;
+      width: min(440px, 100%);
+      padding: 2.2rem;
+      position: relative;
+      animation: pop 0.2s ease;
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.6rem; }
+    .modal-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .hero-tag {
+      display: inline-block;
+      background: var(--yellow);
+      color: var(--ink);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+
+    .profile-hero {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 3rem 2.5rem;
+    }
+    .profile-hero-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .profile-hero-text h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.4rem;
+    }
+    .profile-hero-text h1 .hl-blue { color: var(--blue); }
+    .profile-hero-text p { color: var(--muted); font-size: 0.95rem; }
+
+    .avatar {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 2rem;
+    }
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .panel-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+    .panel-icon-blue   { background: #dbeeff; }
+    .panel-icon-red    { background: #fce8e0; }
+    .panel-icon-yellow { background: #fff8db; }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      gap: 1rem;
+    }
+    .info-row:last-of-type { border-bottom: none; }
+    .info-key { color: var(--muted); font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .info-val { font-weight: 600; text-align: right; }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    .danger-panel {
+      background: #fff8f6;
+      border: 1px solid #fce8e0;
+      border-radius: 18px;
+      padding: 2rem;
+    }
+    .danger-panel .panel-title { color: var(--red); }
+
+    .alert {
+      display: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+    }
+    .alert-success { background: #e6f4ec; color: #1a7a40; display: block; }
+    .alert-error   { background: #fce8e0; color: var(--red); display: block; }
+
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    @media (max-width: 860px) {
+      nav { padding: 1rem 1.5rem; }
+      .profile-hero { padding: 2rem 1.5rem 1.8rem; }
+      .section { padding: 2.5rem 1.5rem; }
+      .profile-grid { grid-template-columns: 1fr; }
+      footer { padding: 2rem 1.5rem; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="logo">Room<span>Drop</span></a>
+    <div class="nav-actions">
+      <a href="/dashboard" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Dashboard
+      </a>
+    </div>
+  </nav>
+
+  <div class="profile-hero">
+    <div class="profile-hero-inner">
+      <div class="profile-hero-text">
+        <span class="hero-tag">Account Settings</span>
+        <h1>Your <span class="hl-blue">Profile.</span></h1>
+        <p>Manage your account details and security settings.</p>
+      </div>
+      <div class="avatar" title="John Doe">{{ name }}</div>
+    </div>
+  </div>
+
+  <main class="section" style="padding-top: 3rem;">
+
+    <div class="profile-grid">
+
+      <div class="panel">
+        <div class="panel-title">
+          <div class="panel-icon panel-icon-blue">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </div>
+          Account Info
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">Name</span>
+          <span class="info-val">{{ name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Email</span>
+          <span class="info-val">{{ email }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Account Type</span>
+          <span class="info-val">Member</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Member Since</span>
+          <span class="info-val">Jan 2025</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Rooms Created</span>
+          <span class="info-val">8</span>
+        </div>
+        
+
+        </div>
+      <div class="panel">
+        <div class="panel-title">
+          <div class="panel-icon panel-icon-yellow">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          Change Password
+        </div>
+
+        <div id="pwForm">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input type="password" id="currentPassword" placeholder="Enter current password" autocomplete="current-password"/>
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="newPassword" placeholder="At least 8 characters" autocomplete="new-password"/>
+            <p class="hint">Use a mix of letters, numbers, and symbols.</p>
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="confirmPassword" placeholder="Re-enter new password" autocomplete="new-password"/>
+          </div>
+
+          <div id="pwAlert" class="alert"></div>
+
+          <button class="btn btn-primary btn-full" style="margin-top:0.5rem;" onclick="submitPasswordChange()">
+            Update Password →
+          </button>
+        </div>
+                <hr class = "section-divider">
+         <p class="hint">To change your username or email, contact support.</p>
+      </div>
+      
+    </div>
+
+    <div class="danger-panel" style="margin-top: 1.5rem;">
+      <div class="panel-title">
+        <div class="panel-icon panel-icon-red">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </div>
+        Sign Out
+      </div>
+      <p class="step-desc" style="margin-bottom: 1.2rem;">
+        You will be logged out of all active sessions on this device.
+        Any open rooms will remain available until they expire.
+      </p>
+      <a href="/logout" class="btn btn-danger" onclick="return confirmLogout()">Log Out of RoomDrop</a>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: center;">
+      <a href="/dashboard" class="btn btn-ghost btn-lg">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Return to Dashboard
+      </a>
+    </div>
+
+  </main>
+
+  <footer>
+    <a href="/" class="logo" style="font-size:1rem">Room<span>Drop</span></a>
+    <div>Private file sharing, built simple.</div>
+    <div>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">GitHub</a>
+    </div>
+  </footer>
+
+  <script>
+    async function submitPasswordChange() {
+      const current  = document.getElementById('currentPassword').value.trim();
+      const next     = document.getElementById('newPassword').value.trim();
+      const confirm  = document.getElementById('confirmPassword').value.trim();
+      const alertEl  = document.getElementById('pwAlert');
+
+      alertEl.className = 'alert';
+      alertEl.textContent = '';
+
+      if (!current || !next || !confirm) {
+        showAlert(alertEl, 'error', 'Please fill in all password fields.');
+        return;
+      }
+      if (next.length < 8) {
+        showAlert(alertEl, 'error', 'New password must be at least 8 characters.');
+        return;
+      }
+      if (next !== confirm) {
+        showAlert(alertEl, 'error', 'New passwords do not match.');
+        return;
+      }
+
+      const btn = document.querySelector('#pwForm .btn-primary');
+      const originalText = btn.innerText;
+      btn.innerText = 'Updating…';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password: current, new_password: next })
+        });
+
+        if (response.ok) {
+          showAlert(alertEl, 'success', 'Password updated successfully.');
+          document.getElementById('currentPassword').value = '';
+          document.getElementById('newPassword').value = '';
+          document.getElementById('confirmPassword').value = '';
+        } else {
+          const data = await response.json().catch(() => ({}));
+          showAlert(alertEl, 'error', data.error || 'Failed to update password. Please try again.');
+        }
+      } catch (err) {
+        console.error('Password change error:', err);
+        showAlert(alertEl, 'error', 'Network error. Please check your connection.');
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    function showAlert(el, type, message) {
+      el.textContent = message;
+      el.className = 'alert alert-' + type;
+    }
+
+    function confirmLogout() {
+      return confirm('Are you sure you want to log out?');
+    }
+  </script>
+
+</body>
+</html>
