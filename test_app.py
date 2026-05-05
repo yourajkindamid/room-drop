@@ -18,7 +18,92 @@ def get_r2_client():
         aws_secret_access_key=os.getenv('R2_SECRET_KEY'),
         region_name='auto',
     )
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    file = request.files.get('file')
+    if file is None or not file.filename or file.filename == '':
+        return jsonify({"error": "No file provided"}), 400
 
+    raw_room_id = request.form.get('room_id')
+    if not raw_room_id or not raw_room_id.strip():
+        return jsonify({"error": "room_id is required"}), 400
+    room_id = raw_room_id.strip()
+
+    file.stream.seek(0, os.SEEK_END)
+    size = file.stream.tell()
+    file.stream.seek(0)
+    if size == 0:
+        return jsonify({"error": "Empty file"}), 400
+
+    uuid_no_hyphens = uuid.uuid4().hex
+    original_filename = file.filename
+    sanitized_filename = original_filename.strip().replace(' ', '_')
+    file_key = f"{room_id}/{uuid_no_hyphens}_{sanitized_filename}"
+
+    account_id = os.getenv('R2_ACCOUNT_ID')
+    bucket_name = os.getenv('R2_BUCKET_NAME')
+    filepath = f"https://{account_id}.r2.cloudflarestorage.com/{bucket_name}/{file_key}"
+
+    conn = get_db_connection()
+    cur = None
+    try:
+        room_type = _resolve_room(conn, room_id)
+        if room_type is None:
+            return jsonify({"error": "Room not found"}), 404
+
+        user_id = session.get('user_id')
+        guest_id = None
+        if not user_id:
+            guest_id = get_or_create_guest(conn, room_id)
+
+        try:
+            r2 = get_r2_client()
+            r2.upload_fileobj(Fileobj=file.stream, Bucket=bucket_name, Key=file_key)
+        except Exception as e:
+            app.logger.error(f"R2 upload failed: room_id={room_id} key={file_key} error={e}")
+            if room_type == 'user':
+                try:
+                    insert_log(
+                        conn, event_type='file_upload_failed',
+                        room_id=room_id, user_id=user_id, guest_id=guest_id,
+                        ip_address=request.remote_addr, message='R2 upload failed',
+                    )
+                    conn.commit()
+                except Exception as log_err:
+                    app.logger.error(f"Could not record file_upload_failed log: {log_err}")
+                    conn.rollback()
+            return jsonify({"error": "Upload to storage failed"}), 500
+
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO files (room_id, file_name, file_key, filepath, user_id, guest_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (room_id, original_filename, file_key, filepath, user_id, guest_id),
+            )
+            if room_type == 'user':
+                insert_log(
+                    conn, event_type='file_upload',
+                    room_id=room_id, user_id=user_id, guest_id=guest_id,
+                    ip_address=request.remote_addr, message=original_filename,
+                )
+            conn.commit()
+        except psycopg2.Error as e:
+            app.logger.error(f"DB insert for file record failed: room_id={room_id} error={e}")
+            conn.rollback()
+            return jsonify({"error": "Database error during file record creation"}), 500
+
+        return jsonify({"message": "upload successful", "file_key": file_key}), 200
+    finally:
+        if cur is not None:
+            try: cur.close()
+            except Exception: pass
+        try: conn.close()
+        except Exception: pass
+
+        
 @app.route('/', methods=['GET'])
 def home_page():
     return render_template('index.html')
