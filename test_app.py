@@ -37,6 +37,58 @@ def profile_render():
     }
 
     return render_template('profile.html', **context)
+@app.route('/create-guest-room', methods=['GET', 'POST'])
+def create_guest_room():
+    if request.method == 'POST':
+        room_name = (request.form.get('room_name') or '').strip()
+        if not room_name:
+            flash('Room name is required.', 'error')
+            return redirect(url_for('create_guest_room'))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            new_room_id = _generate_room_id(conn)
+            expires_at = datetime.utcnow() + timedelta(minutes=ROOM_LIFETIME_MINUTES)
+
+            # Create the owner guest first; guests.room_id has no FK so this
+            # is fine even though the guest_room row doesn't exist yet.
+            owner_token = str(uuid.uuid4())
+            cur.execute(
+                "INSERT INTO guests (guest_token, room_id) VALUES (%s, %s) RETURNING id",
+                (owner_token, new_room_id),
+            )
+            owner_guest_id = cur.fetchone()[0]
+
+            cur.execute(
+                """
+                INSERT INTO guest_room (room_id, room_name, guest_owner_id, expires_at, is_active)
+                VALUES (%s, %s, %s, %s, TRUE)
+                """,
+                (new_room_id, room_name, owner_guest_id, expires_at),
+            )
+            conn.commit()
+
+            # Put the owner's token in the session so they're recognized
+            # as the same guest when they enter the room page.
+            tokens = session.get('guest_tokens')
+            if not isinstance(tokens, dict):
+                tokens = {}
+            tokens[new_room_id] = owner_token
+            session['guest_tokens'] = tokens
+            session.modified = True
+
+            return redirect(url_for('view_guest_room', room_id=new_room_id))
+        except psycopg2.Error as e:
+            app.logger.error(f"create_guest_room DB error: {e}")
+            conn.rollback()
+            flash('Could not create room. Please try again.', 'error')
+            return redirect(url_for('create_guest_room'))
+        finally:
+            cur.close()
+            conn.close()
+
+    return render_template('create_guest_room.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
