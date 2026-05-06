@@ -3,237 +3,462 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RoomDrop - Room</title>
+  <title>{{ room.room_name }} — Room Drop</title>
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Figtree', sans-serif;
-    }
-
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #f4efe6;
-      --surface: #ffffff;
-      --ink: #1a1a1a;
-      --muted: #6b6358;
-      --border: #e4ddd0;
-      --red: #D1470B;
-      --orange: #E97700;
-      --yellow: #FFB703;
-      --sky: #8ECAE6;
-      --blue: #2671BC;
+      --bg: #f4efe6; --surface: #ffffff; --ink: #1a1a1a;
+      --muted: #6b6358; --border: #e4ddd0;
+      --red: #D1470B; --orange: #E97700; --yellow: #FFB703;
+      --sky: #8ECAE6; --blue: #2671BC; --green: #2ecc71;
     }
-
+    html, body { height: 100%; }
     body {
-      background: var(--bg);
-      color: var(--ink);
-      min-height: 100vh;
+      font-family: 'Figtree', sans-serif; background: var(--bg);
+      color: var(--ink); display: flex; flex-direction: column;
     }
-
     nav {
-      padding: 1.2rem 2rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
     }
-
+    .nav-left { display: flex; align-items: center; gap: 1.2rem; }
     .logo {
-      text-decoration: none;
-      color: var(--ink);
-      font-weight: 800;
-      font-size: 1.3rem;
+      font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em;
+      text-decoration: none; color: var(--ink);
     }
-
-    .logo span {
-      color: var(--red);
+    .logo span { color: var(--red); }
+    .room-info {
+      display: flex; flex-direction: column; gap: 0.15rem;
+      padding-left: 1.2rem; border-left: 1px solid var(--border);
     }
-
-    .room-meta {
-      font-size: 0.9rem;
-      color: var(--muted);
+    .room-name {
+      font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em;
     }
-
-    .main-layout {
-      display: grid;
-      grid-template-columns: 260px 1fr 300px;
-      gap: 1.2rem;
-      padding: 1.5rem;
-      height: calc(100vh - 80px);
+    .room-id-bar {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-family: 'Courier New', monospace; font-size: 0.78rem;
+      color: var(--red); font-weight: 600; cursor: pointer;
+      user-select: all;
     }
+    .nav-right { display: flex; align-items: center; gap: 0.6rem; }
+    .expiry {
+      font-size: 0.78rem; color: var(--muted);
+      padding: 0.4rem 0.8rem; background: var(--bg);
+      border-radius: 999px;
+    }
+    .btn {
+      font-family: 'Figtree', sans-serif; font-size: 0.82rem; font-weight: 500;
+      padding: 0.5rem 1rem; border-radius: 999px; border: none; cursor: pointer;
+      text-decoration: none; transition: all 0.2s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;
+    }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+    .btn-ghost:hover { background: var(--ink); color: var(--bg); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1f5ea0; }
+    .btn-orange { background: var(--red); color: #fff; }
+    .btn-orange:hover { background: #b23a07; }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+    .btn-danger:hover { background: var(--red); color: #fff; }
 
+    .room-layout {
+      flex: 1; display: grid; grid-template-columns: 1.4fr 1fr;
+      gap: 1px; background: var(--border); overflow: hidden;
+    }
     .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 1rem;
+      background: var(--bg); display: flex; flex-direction: column;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+    }
+    .panel-header {
+      padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .panel-label {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--red); margin-bottom: 0.3rem;
+    }
+    .panel-title {
+      font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em;
     }
 
-    .panel-title {
-      font-weight: 700;
-      margin-bottom: 1rem;
+    /* ── FILES PANEL ── */
+    .drop-zone {
+      margin: 1.5rem; padding: 2.5rem 1.5rem;
+      border: 2px dashed var(--border); border-radius: 16px;
+      background: var(--surface); text-align: center;
+      transition: all 0.2s ease; cursor: pointer; flex-shrink: 0;
+    }
+    .drop-zone.dragover {
+      border-color: var(--blue); background: rgba(38, 113, 188, 0.05);
+    }
+    .drop-zone-icon {
+      width: 48px; height: 48px; background: var(--bg);
+      border-radius: 50%; display: inline-flex;
+      align-items: center; justify-content: center;
+      margin-bottom: 0.8rem; font-size: 1.5rem; color: var(--blue);
+    }
+    .drop-zone-title { font-weight: 700; margin-bottom: 0.3rem; }
+    .drop-zone-sub { font-size: 0.85rem; color: var(--muted); }
+    .drop-zone input[type="file"] { display: none; }
+
+    .upload-progress {
+      margin: 0 1.5rem 1rem; padding: 0.7rem 1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; font-size: 0.85rem; color: var(--muted);
+      display: none;
+    }
+    .upload-progress.active { display: block; }
+
+    .files-list {
+      flex: 1; overflow-y: auto; padding: 0 1.5rem 1.5rem;
+    }
+    .files-empty {
+      text-align: center; padding: 2rem 1rem;
+      color: var(--muted); font-size: 0.9rem;
+    }
+    .file-row {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.85rem 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .file-row:hover { border-color: var(--blue); transform: translateX(2px); }
+    .file-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: var(--bg); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
       font-size: 1rem;
     }
-
-    /* LEFT USERS PANEL */
-    .user-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      overflow-y: auto;
+    .file-name {
+      flex: 1; font-size: 0.9rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-
-    .user {
-      padding: 0.8rem;
-      border-radius: 12px;
-      background: var(--bg);
-      font-size: 0.9rem;
-      font-weight: 500;
+    .file-download {
+      font-size: 0.78rem; color: var(--blue); text-decoration: none;
+      padding: 0.4rem 0.8rem; border-radius: 999px;
+      border: 1px solid var(--blue); transition: all 0.15s;
     }
+    .file-download:hover { background: var(--blue); color: #fff; }
 
-    /* CENTER CHAT */
+    /* ── CHAT PANEL ── */
     .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      padding-right: 0.3rem;
-      margin-bottom: 1rem;
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 0.6rem;
     }
-
+    .chat-empty {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--muted); font-size: 0.9rem;
+      margin: auto;
+    }
     .message {
-      padding: 0.9rem 1rem;
-      border-radius: 14px;
-      max-width: 75%;
-      font-size: 0.92rem;
+      max-width: 80%; padding: 0.7rem 1rem;
+      border-radius: 14px; word-wrap: break-word;
     }
-
-    .message.received {
-      background: var(--bg);
+    .message-meta {
+      font-size: 0.7rem; color: var(--muted);
+      margin-bottom: 0.2rem; font-weight: 600;
+    }
+    .message-content {
+      font-size: 0.92rem; line-height: 1.4;
+    }
+    .message.theirs {
+      background: var(--surface); border: 1px solid var(--border);
       align-self: flex-start;
     }
-
-    .message.sent {
-      background: var(--blue);
-      color: white;
+    .message.mine {
+      background: var(--blue); color: #fff;
       align-self: flex-end;
     }
-
-    .chat-input-container {
-      display: flex;
-      gap: 0.7rem;
+    .message.mine .message-meta { color: rgba(255,255,255,0.75); }
+    .message.system {
+      align-self: center; background: transparent;
+      font-size: 0.75rem; color: var(--muted); font-style: italic;
+      padding: 0.3rem 0.8rem;
     }
 
+    .chat-input-area {
+      flex-shrink: 0; padding: 1rem 1.5rem;
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex; gap: 0.6rem;
+    }
     .chat-input {
-      flex: 1;
-      padding: 0.9rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      outline: none;
-      font-size: 0.95rem;
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0.75rem 1rem;
+      font-family: 'Figtree', sans-serif; font-size: 0.92rem;
+      outline: none; transition: border-color 0.15s;
+      color: var(--ink); resize: none;
     }
-
-    .send-btn {
-      border: none;
-      background: var(--blue);
-      color: white;
-      padding: 0.9rem 1.3rem;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 600;
+    .chat-input:focus { border-color: var(--blue); }
+    .chat-send {
+      background: var(--blue); color: #fff; border: none;
+      border-radius: 12px; padding: 0 1.3rem; cursor: pointer;
+      font-weight: 600; font-size: 0.88rem; transition: background 0.15s;
     }
+    .chat-send:hover { background: #1f5ea0; }
+    .chat-send:disabled { background: var(--muted); cursor: not-allowed; }
 
-    /* RIGHT FILE PANEL */
-    .upload-btn {
-      background: var(--red);
-      color: white;
-      border: none;
-      padding: 0.9rem;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 600;
-      margin-bottom: 1rem;
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--ink); color: #fff;
+      padding: 0.7rem 1.3rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 1000;
     }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--red); }
+    .toast.success { background: var(--green); }
 
-    .file-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      overflow-y: auto;
-    }
-
-    .file {
-      padding: 0.9rem;
-      border-radius: 12px;
-      background: var(--bg);
-      font-size: 0.9rem;
-    }
-
-    @media (max-width: 1000px) {
-      .main-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
+    @media (max-width: 860px) {
+      nav { padding: 0.8rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+      .nav-left { gap: 0.6rem; }
+      .room-info { padding-left: 0.6rem; }
+      .room-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .drop-zone { margin: 1rem; padding: 1.5rem 1rem; }
+      .files-list { padding: 0 1rem 1rem; }
+      .chat-messages { padding: 1rem; }
+      .chat-input-area { padding: 0.7rem 1rem; }
     }
   </style>
 </head>
 <body>
-
   <nav>
-    <a href="/" class="logo">Room<span>Drop</span></a>
-    <div class="room-meta">
-      Room ID: {{ room_id }}
+    <div class="nav-left">
+      <a href="/" class="logo">Room<span>Drop</span></a>
+      <div class="room-info">
+        <div class="room-name">{{ room.room_name }}</div>
+        <div class="room-id-bar" title="Click to copy" onclick="copyRoomId()">
+          <span id="roomIdText">{{ room.room_id }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <span class="expiry" id="expiryDisplay">Expires in {{ room.expires_in }}</span>
+      <button class="btn btn-danger" onclick="leaveRoom()">Leave</button>
     </div>
   </nav>
 
-  <div class="main-layout">
-
-    <!-- LEFT SIDEBAR -->
+  <div class="room-layout">
+    <!-- Files panel -->
     <div class="panel">
-      <div class="panel-title">Connected Users</div>
+      <div class="panel-header">
+        <div class="panel-label">// files</div>
+        <div class="panel-title">Shared Files</div>
+      </div>
 
-      <div class="user-list" id="userList">
-        <div class="user">Raffay</div>
-        <div class="user">Guest_42</div>
+      <label class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">↑</div>
+        <div class="drop-zone-title">Drop files here or click to upload</div>
+        <div class="drop-zone-sub">Files are stored privately and shared only with this room</div>
+        <input type="file" id="fileInput" multiple>
+      </label>
+
+      <div class="upload-progress" id="uploadProgress">
+        Uploading <span id="uploadFilename">...</span>
+      </div>
+
+      <div class="files-list" id="filesList">
+        <div class="files-empty">No files yet — drop something to get started.</div>
       </div>
     </div>
 
-    <!-- CENTER CHAT -->
+    <!-- Chat panel -->
     <div class="panel">
-      <div class="panel-title">Room Chat</div>
+      <div class="panel-header">
+        <div class="panel-label">// chat</div>
+        <div class="panel-title">Live Messages</div>
+      </div>
 
       <div class="chat-messages" id="chatMessages">
-        <div class="message received">Hello everyone 👋</div>
-        <div class="message sent">Hey, joined just now.</div>
+        <div class="chat-empty">No messages yet. Say hello.</div>
       </div>
 
-      <div class="chat-input-container">
-        <input type="text" class="chat-input" placeholder="Type message...">
-        <button class="send-btn">Send</button>
-      </div>
-    </div>
-
-    <!-- RIGHT FILES -->
-    <div class="panel">
-      <div class="panel-title">Files</div>
-
-      <button class="upload-btn">Upload File</button>
-
-      <div class="file-list">
-        <div class="file">report.pdf</div>
-        <div class="file">notes.zip</div>
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" class="chat-input"
+               placeholder="Type a message..." maxlength="10000" autocomplete="off">
+        <button class="chat-send" id="chatSend" onclick="sendMessage()">Send</button>
       </div>
     </div>
-
   </div>
 
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const ROOM_ID = {{ room.room_id | tojson }};
+    const USERNAME = {{ username | tojson }};
+    const IS_GUEST = {{ (not logged_in) | tojson }};
+
+    // ── Toast helper ──
+    let toastTimer;
+    function showToast(message, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    function copyRoomId() {
+      navigator.clipboard.writeText(ROOM_ID).then(() => {
+        showToast('Room ID copied!', 'success');
+      });
+    }
+
+    // ── File upload ──
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadFilename = document.getElementById('uploadFilename');
+
+    ['dragover', 'dragenter'].forEach(evt =>
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      }));
+    ['dragleave', 'drop'].forEach(evt =>
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      }));
+
+    dropZone.addEventListener('drop', e => {
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', e => {
+      handleFiles(e.target.files);
+      fileInput.value = '';
+    });
+
+    async function handleFiles(files) {
+      for (const file of files) {
+        await uploadFile(file);
+      }
+      refreshFiles();
+    }
+
+    async function uploadFile(file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('room_id', ROOM_ID);
+
+      uploadProgress.classList.add('active');
+      uploadFilename.textContent = file.name;
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || 'Upload failed', 'error');
+        } else {
+          showToast(`Uploaded: ${file.name}`, 'success');
+        }
+      } catch (err) {
+        showToast('Upload error: ' + err.message, 'error');
+      } finally {
+        uploadProgress.classList.remove('active');
+      }
+    }
+
+    // ── File list refresh ──
+    async function refreshFiles() {
+      try {
+        const res = await fetch(`/files/${encodeURIComponent(ROOM_ID)}`);
+        const data = await res.json();
+        const list = document.getElementById('filesList');
+        if (!Array.isArray(data) || data.length === 0) {
+          list.innerHTML = '<div class="files-empty">No files yet — drop something to get started.</div>';
+          return;
+        }
+        list.innerHTML = data.map(f => `
+          <div class="file-row">
+            <div class="file-icon">📄</div>
+            <div class="file-name" title="${escapeHtml(f.file_name)}">${escapeHtml(f.file_name)}</div>
+            <a class="file-download" href="${f.url}" target="_blank" rel="noopener">Download</a>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('refreshFiles failed:', err);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // ── Socket.IO chat ──
+    const socket = io();
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+
+    socket.on('connect', () => {
+      socket.emit('join_room', { room_id: ROOM_ID });
+    });
+
+    socket.on('room_joined', data => {
+      // No-op; could show a "joined" system message if you want.
+    });
+
+    socket.on('new_message', data => {
+      addMessage(data);
+    });
+
+    socket.on('error', data => {
+      showToast(data.message || 'Socket error', 'error');
+    });
+
+    function addMessage(data) {
+      const empty = chatMessages.querySelector('.chat-empty');
+      if (empty) empty.remove();
+
+      const isMine = data.username === USERNAME;
+      const msg = document.createElement('div');
+      msg.className = 'message ' + (isMine ? 'mine' : 'theirs');
+      msg.innerHTML = `
+        <div class="message-meta">${escapeHtml(data.username)}</div>
+        <div class="message-content">${escapeHtml(data.content)}</div>
+      `;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendMessage() {
+      const content = chatInput.value.trim();
+      if (!content) return;
+      socket.emit('send_message', {
+        room_id: ROOM_ID,
+        content: content,
+        username: USERNAME,
+      });
+      chatInput.value = '';
+    }
+
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ── Leave ──
+    function leaveRoom() {
+      socket.emit('leave_room', { room_id: ROOM_ID });
+      setTimeout(() => {
+        window.location.href = IS_GUEST ? '/' : '/dashboard';
+      }, 200);
+    }
+
+    // ── Initial load ──
+    refreshFiles();
+    // Periodic refresh for files uploaded by other room members.
+    setInterval(refreshFiles, 5000);
+  </script>
 </body>
 </html>
