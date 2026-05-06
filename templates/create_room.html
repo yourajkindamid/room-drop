@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Room — Room Drop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4efe6; --surface: #ffffff; --ink: #1a1a1a;
+      --muted: #6b6358; --border: #e4ddd0;
+      --red: #D1470B; --yellow: #FFB703; --sky: #8ECAE6; --blue: #2671BC;
+    }
+    body {
+      font-family: 'Figtree', sans-serif; background: var(--bg);
+      color: var(--ink); min-height: 100vh; display: flex; flex-direction: column;
+    }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.5rem 3rem; border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em;
+      text-decoration: none; color: var(--ink);
+    }
+    .logo span { color: var(--red); }
+    .btn {
+      font-family: 'Figtree', sans-serif; font-size: 0.85rem; font-weight: 500;
+      padding: 0.6rem 1.3rem; border-radius: 999px; border: none; cursor: pointer;
+      text-decoration: none; transition: all 0.2s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+    .btn-ghost:hover { background: var(--ink); color: var(--bg); }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover { background: #1f5ea0; }
+    .btn-lg { padding: 0.95rem 2rem; font-size: 0.95rem; }
+
+    main {
+      flex: 1; display: grid; place-items: center;
+      padding: 3rem 1.5rem; position: relative;
+    }
+    .deco-arch {
+      position: absolute; top: 10%; left: 8%; width: 140px; height: 200px;
+      background: var(--sky); border-radius: 140px 140px 0 0;
+      opacity: 0.6; z-index: 0;
+    }
+    .deco-circle {
+      position: absolute; bottom: 12%; right: 10%; width: 120px; height: 120px;
+      background: var(--yellow); border-radius: 50%; opacity: 0.7; z-index: 0;
+    }
+    .auth-card {
+      position: relative; z-index: 1; width: min(480px, 100%);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2.5rem;
+      box-shadow: 0 20px 50px rgba(26,26,26,0.06);
+    }
+    .auth-label {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--red); margin-bottom: 0.7rem;
+    }
+    .auth-title {
+      font-size: 1.9rem; font-weight: 800; letter-spacing: -0.025em;
+      line-height: 1.1; margin-bottom: 0.6rem;
+    }
+    .auth-sub {
+      font-size: 0.92rem; color: var(--muted); line-height: 1.5; margin-bottom: 2rem;
+    }
+    .form-group { margin-bottom: 1.1rem; }
+    label {
+      font-size: 0.72rem; font-weight: 600; color: var(--muted);
+      display: block; margin-bottom: 0.4rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--ink); font-family: 'Figtree', sans-serif;
+      font-size: 0.95rem; padding: 0.85rem 1rem; outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input:focus { border-color: var(--blue); background: var(--surface); }
+    .submit-btn { width: 100%; margin-top: 0.5rem; }
+    .info-pill {
+      background: rgba(38, 113, 188, 0.08);
+      border: 1px solid rgba(38, 113, 188, 0.2);
+      border-radius: 10px; padding: 0.85rem 1rem;
+      font-size: 0.85rem; color: var(--blue);
+      margin-bottom: 1.5rem;
+    }
+    .info-pill strong { color: var(--ink); }
+    .flash {
+      padding: 0.75rem 0.95rem; border-radius: 10px;
+      font-size: 0.85rem; margin-bottom: 1.2rem; border: 1px solid;
+    }
+    .flash.error {
+      background: rgba(209, 71, 11, 0.08); color: var(--red);
+      border-color: rgba(209, 71, 11, 0.25);
+    }
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .auth-card { padding: 1.8rem; }
+      .deco-arch, .deco-circle { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">Room<span>Drop</span></a>
+    <a href="/dashboard" class="btn btn-ghost">← Dashboard</a>
+  </nav>
+
+  <main>
+    <div class="deco-arch"></div>
+    <div class="deco-circle"></div>
+
+    <div class="auth-card">
+      <div class="auth-label">// new room</div>
+      <div class="auth-title">Create a Room.</div>
+      <p class="auth-sub">Name your room. We'll generate a unique Room ID for it.</p>
+
+      <div class="info-pill">
+        <strong>Heads up:</strong> Your room expires after 45 minutes of inactivity.
+        File sharing and chat are both enabled.
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="/create-room">
+        <div class="form-group">
+          <label>Room Name</label>
+          <input type="text" name="room_name" placeholder="e.g. Project Assets, Team Photos…" required maxlength="100">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg submit-btn">Create Room →</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
