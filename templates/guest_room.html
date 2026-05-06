@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ room.room_name }} — Room Drop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4efe6; --surface: #ffffff; --ink: #1a1a1a;
+      --muted: #6b6358; --border: #e4ddd0;
+      --red: #D1470B; --orange: #E97700; --yellow: #FFB703;
+      --sky: #8ECAE6; --blue: #2671BC; --green: #2ecc71;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Figtree', sans-serif; background: var(--bg);
+      color: var(--ink); display: flex; flex-direction: column;
+    }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    .nav-left { display: flex; align-items: center; gap: 1.2rem; }
+    .logo {
+      font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em;
+      text-decoration: none; color: var(--ink);
+    }
+    .logo span { color: var(--red); }
+    .room-info {
+      display: flex; flex-direction: column; gap: 0.15rem;
+      padding-left: 1.2rem; border-left: 1px solid var(--border);
+    }
+    .room-name {
+      font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em;
+    }
+    .room-id-bar {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-family: 'Courier New', monospace; font-size: 0.78rem;
+      color: var(--red); font-weight: 600; cursor: pointer;
+      user-select: all;
+    }
+    .nav-right { display: flex; align-items: center; gap: 0.6rem; }
+    .expiry {
+      font-size: 0.78rem; color: var(--muted);
+      padding: 0.4rem 0.8rem; background: var(--bg);
+      border-radius: 999px;
+    }
+    .guest-badge {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 0.3rem 0.7rem;
+      background: var(--yellow); color: var(--ink); border-radius: 999px;
+    }
+    .btn {
+      font-family: 'Figtree', sans-serif; font-size: 0.82rem; font-weight: 500;
+      padding: 0.5rem 1rem; border-radius: 999px; border: none; cursor: pointer;
+      text-decoration: none; transition: all 0.2s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;
+    }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+    .btn-danger:hover { background: var(--red); color: #fff; }
+
+    main {
+      flex: 1; max-width: 900px; width: 100%;
+      margin: 0 auto; padding: 2rem; overflow-y: auto;
+    }
+
+    .panel-label {
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--red); margin-bottom: 0.4rem;
+    }
+    .panel-title {
+      font-size: 1.4rem; font-weight: 700;
+      letter-spacing: -0.015em; margin-bottom: 1.5rem;
+    }
+
+    .info-banner {
+      background: rgba(255, 183, 3, 0.15);
+      border: 1px solid rgba(255, 183, 3, 0.4);
+      border-radius: 12px; padding: 0.85rem 1.1rem;
+      font-size: 0.85rem; color: #8a6500;
+      margin-bottom: 1.5rem;
+    }
+    .info-banner strong { color: var(--ink); }
+
+    .drop-zone {
+      padding: 3rem 2rem;
+      border: 2px dashed var(--border); border-radius: 16px;
+      background: var(--surface); text-align: center;
+      transition: all 0.2s ease; cursor: pointer; margin-bottom: 1.5rem;
+      display: block;
+    }
+    .drop-zone.dragover {
+      border-color: var(--blue); background: rgba(38, 113, 188, 0.05);
+    }
+    .drop-zone-icon {
+      width: 60px; height: 60px; background: var(--bg);
+      border-radius: 50%; display: inline-flex;
+      align-items: center; justify-content: center;
+      margin-bottom: 1rem; font-size: 1.8rem; color: var(--blue);
+    }
+    .drop-zone-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .drop-zone-sub { font-size: 0.88rem; color: var(--muted); }
+    .drop-zone input[type="file"] { display: none; }
+
+    .upload-progress {
+      padding: 0.7rem 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 0.85rem; color: var(--muted);
+      margin-bottom: 1rem; display: none;
+    }
+    .upload-progress.active { display: block; }
+
+    .files-empty {
+      text-align: center; padding: 2rem 1rem;
+      color: var(--muted); font-size: 0.9rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .file-row {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.85rem 1rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px;
+      margin-bottom: 0.5rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .file-row:hover { border-color: var(--blue); transform: translateX(2px); }
+    .file-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: var(--bg); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .file-name {
+      flex: 1; font-size: 0.9rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .file-download {
+      font-size: 0.78rem; color: var(--blue); text-decoration: none;
+      padding: 0.4rem 0.8rem; border-radius: 999px;
+      border: 1px solid var(--blue); transition: all 0.15s;
+    }
+    .file-download:hover { background: var(--blue); color: #fff; }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--ink); color: #fff;
+      padding: 0.7rem 1.3rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: var(--red); }
+    .toast.success { background: var(--green); }
+
+    @media (max-width: 768px) {
+      nav { padding: 0.8rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+      .nav-left { gap: 0.6rem; }
+      .room-info { padding-left: 0.6rem; }
+      main { padding: 1.5rem 1rem; }
+      .drop-zone { padding: 2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-left">
+      <a href="/" class="logo">Room<span>Drop</span></a>
+      <div class="room-info">
+        <div class="room-name">{{ room.room_name }}</div>
+        <div class="room-id-bar" title="Click to copy" onclick="copyRoomId()">
+          <span id="roomIdText">{{ room.room_id }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <span class="guest-badge">Guest Room</span>
+      <span class="expiry" id="expiryDisplay">Expires in {{ room.expires_in }}</span>
+      <button class="btn btn-danger" onclick="leaveRoom()">Leave</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="panel-label">// shared files</div>
+    <div class="panel-title">Drop & Share</div>
+
+    <div class="info-banner">
+      <strong>Guest room:</strong> File sharing only — chat is disabled.
+      <a href="/signup" style="color:#1f5ea0;font-weight:600;text-decoration:underline">Sign up</a>
+      for persistent rooms with messaging.
+    </div>
+
+    <label class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">↑</div>
+      <div class="drop-zone-title">Drop files here or click to upload</div>
+      <div class="drop-zone-sub">Files are private — only people with the Room ID can see them</div>
+      <input type="file" id="fileInput" multiple>
+    </label>
+
+    <div class="upload-progress" id="uploadProgress">
+      Uploading <span id="uploadFilename">...</span>
+    </div>
+
+    <div id="filesList">
+      <div class="files-empty">No files yet — drop something to get started.</div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const ROOM_ID = {{ room.room_id | tojson }};
+
+    let toastTimer;
+    function showToast(message, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    function copyRoomId() {
+      navigator.clipboard.writeText(ROOM_ID).then(() => {
+        showToast('Room ID copied!', 'success');
+      });
+    }
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadFilename = document.getElementById('uploadFilename');
+
+    ['dragover', 'dragenter'].forEach(evt =>
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      }));
+    ['dragleave', 'drop'].forEach(evt =>
+      dropZone.addEventListener(evt, e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      }));
+
+    dropZone.addEventListener('drop', e => {
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', e => {
+      handleFiles(e.target.files);
+      fileInput.value = '';
+    });
+
+    async function handleFiles(files) {
+      for (const file of files) {
+        await uploadFile(file);
+      }
+      refreshFiles();
+    }
+
+    async function uploadFile(file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('room_id', ROOM_ID);
+
+      uploadProgress.classList.add('active');
+      uploadFilename.textContent = file.name;
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || 'Upload failed', 'error');
+        } else {
+          showToast(`Uploaded: ${file.name}`, 'success');
+        }
+      } catch (err) {
+        showToast('Upload error: ' + err.message, 'error');
+      } finally {
+        uploadProgress.classList.remove('active');
+      }
+    }
+
+    async function refreshFiles() {
+      try {
+        const res = await fetch(`/files/${encodeURIComponent(ROOM_ID)}`);
+        const data = await res.json();
+        const list = document.getElementById('filesList');
+        if (!Array.isArray(data) || data.length === 0) {
+          list.innerHTML = '<div class="files-empty">No files yet — drop something to get started.</div>';
+          return;
+        }
+        list.innerHTML = data.map(f => `
+          <div class="file-row">
+            <div class="file-icon">📄</div>
+            <div class="file-name" title="${escapeHtml(f.file_name)}">${escapeHtml(f.file_name)}</div>
+            <a class="file-download" href="${f.url}" target="_blank" rel="noopener">Download</a>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('refreshFiles failed:', err);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // Use sockets just for join/leave membership tracking.
+    const socket = io();
+    socket.on('connect', () => {
+      socket.emit('join_room', { room_id: ROOM_ID });
+    });
+    socket.on('error', data => {
+      // Silently swallow socket errors in guest rooms — chat is intentionally absent.
+      console.warn('Socket:', data.message);
+    });
+
+    function leaveRoom() {
+      socket.emit('leave_room', { room_id: ROOM_ID });
+      setTimeout(() => { window.location.href = '/'; }, 200);
+    }
+
+    refreshFiles();
+    setInterval(refreshFiles, 5000);
+  </script>
+</body>
+</html>
