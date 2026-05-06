@@ -4,10 +4,13 @@ import bcrypt
 import string
 import secrets
 
+# db connection string - keep this out of version control ideally
 DATABASE_URL = "postgresql://postgres.fzuoyaxlwwsanlsicmoo:hosh_me_aao_abhijeet_69@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
 app = Flask(__name__)
+# secret key for session signing, change this in prod
 app.secret_key = 'diddy_blud_managment_system'
 
+# sets up a cloudflare r2 client (s3-compatible storage)
 def get_r2_client():
     account_id = os.getenv('R2_ACCOUNT_ID')
     endpoint_url = f"https://{account_id}.r2.cloudflarestorage.com"
@@ -18,9 +21,11 @@ def get_r2_client():
         aws_secret_access_key=os.getenv('R2_SECRET_KEY'),
         region_name='auto',
     )
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     file = request.files.get('file')
+    # basic checks before doing anything
     if file is None or not file.filename or file.filename == '':
         return jsonify({"error": "No file provided"}), 400
 
@@ -29,12 +34,14 @@ def upload_file():
         return jsonify({"error": "room_id is required"}), 400
     room_id = raw_room_id.strip()
 
+    # check the file isn't empty
     file.stream.seek(0, os.SEEK_END)
     size = file.stream.tell()
     file.stream.seek(0)
     if size == 0:
         return jsonify({"error": "Empty file"}), 400
 
+    # build a unique key so files don't overwrite each other
     uuid_no_hyphens = uuid.uuid4().hex
     original_filename = file.filename
     sanitized_filename = original_filename.strip().replace(' ', '_')
@@ -47,20 +54,24 @@ def upload_file():
     conn = get_db_connection()
     cur = None
     try:
+        # make sure the room actually exists
         room_type = _resolve_room(conn, room_id)
         if room_type is None:
             return jsonify({"error": "Room not found"}), 404
 
+        # figure out if it's a logged-in user or a guest uploading
         user_id = session.get('user_id')
         guest_id = None
         if not user_id:
             guest_id = get_or_create_guest(conn, room_id)
 
+        # actually push the file to r2
         try:
             r2 = get_r2_client()
             r2.upload_fileobj(Fileobj=file.stream, Bucket=bucket_name, Key=file_key)
         except Exception as e:
             app.logger.error(f"R2 upload failed: room_id={room_id} key={file_key} error={e}")
+            # log the failure to db if it's a user room
             if room_type == 'user':
                 try:
                     insert_log(
@@ -74,6 +85,7 @@ def upload_file():
                     conn.rollback()
             return jsonify({"error": "Upload to storage failed"}), 500
 
+        # save the file record in db after a successful r2 upload
         try:
             cur = conn.cursor()
             cur.execute(
@@ -83,6 +95,7 @@ def upload_file():
                 """,
                 (room_id, original_filename, file_key, filepath, user_id, guest_id),
             )
+            # only log activity for user rooms, not guest ones
             if room_type == 'user':
                 insert_log(
                     conn, event_type='file_upload',
@@ -97,6 +110,7 @@ def upload_file():
 
         return jsonify({"message": "upload successful", "file_key": file_key}), 200
     finally:
+        # always clean up cursor and connection
         if cur is not None:
             try: cur.close()
             except Exception: pass
@@ -106,11 +120,12 @@ def upload_file():
         
 @app.route('/', methods=['GET'])
 def home_page():
+    # just the landing page
     return render_template('index.html')
 
 @app.route('/dashboard', methods = ['GET'])
 def dashboard_render():
-
+    # grab username from session to personalize the page
     user_name = session['username']
     context = {
         "name": user_name,
@@ -119,12 +134,12 @@ def dashboard_render():
 
 @app.route('/profile', methods = ['GET'])
 def profile_render():
-
     user_name = session['username']
     
     conn = psycopg2.connect(DATABASE_URL)
     cur=conn.cursor()
 
+    # fetch the user's email to display on profile
     cur.execute("select email from users where username = %s", (user_name,))
     user_email = cur.fetchone()
     context = {
@@ -133,6 +148,7 @@ def profile_render():
     }
 
     return render_template('profile.html', **context)
+
 @app.route('/create-guest-room', methods=['GET', 'POST'])
 def create_guest_room():
     if request.method == 'POST':
@@ -147,8 +163,7 @@ def create_guest_room():
             new_room_id = _generate_room_id(conn)
             expires_at = datetime.utcnow() + timedelta(minutes=ROOM_LIFETIME_MINUTES)
 
-            # Create the owner guest first; guests.room_id has no FK so this
-            # is fine even though the guest_room row doesn't exist yet.
+            # create the guest owner before the room row - guests table has no fk constraint
             owner_token = str(uuid.uuid4())
             cur.execute(
                 "INSERT INTO guests (guest_token, room_id) VALUES (%s, %s) RETURNING id",
@@ -165,8 +180,7 @@ def create_guest_room():
             )
             conn.commit()
 
-            # Put the owner's token in the session so they're recognized
-            # as the same guest when they enter the room page.
+            # store the owner token in session so they're recognized when they re-enter the room
             tokens = session.get('guest_tokens')
             if not isinstance(tokens, dict):
                 tokens = {}
@@ -194,6 +208,7 @@ def signup():
         password = request.form['password']
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+        # hash the password before storing - never store plaintext
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         try:
             cur.execute(
@@ -204,6 +219,7 @@ def signup():
             flash('Account created successfully!', 'success')
             return redirect(url_for('login'))
         except psycopg2.errors.UniqueViolation:
+            # username or email is already taken
             conn.rollback()
             flash('Username or email already exists.', 'error')
             return redirect(url_for('signup'))
@@ -226,6 +242,7 @@ def login():
             cur.execute("SELECT id, password_hash FROM users WHERE username = %s", (username,))
             result = cur.fetchone()
 
+            # same error message for both cases so we don't leak which one is wrong
             if result is None:
                 flash('Wrong username or password.', 'error')
                 return redirect(url_for('login'))
@@ -236,6 +253,7 @@ def login():
                 flash('Wrong username or password.', 'error')
                 return redirect(url_for('login'))
 
+            # set session vars on successful login
             session['user_id'] = user_id
             session['username'] = username
             session['logged_in'] = True
@@ -248,17 +266,20 @@ def login():
             conn.close()
 
     return render_template('login.html')
+
 @app.route('/create-room', methods=['POST'])
 def create_room():
     data = request.get_json()
     nickname = data.get('nickname')
     room_name = data.get('room_name')
+    # generate a random 8-char alphanumeric room id
     characters = string.ascii_letters + string.digits
     room_id = ''.join(secrets.choice(characters) for _ in range(8))
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     try:
         owner_user_id = session.get('user_id') 
+        # room expires after 45 minutes
         cur.execute("insert into rooms (room_id, room_name, owner_user_id, expires_at) values (%s, %s, %s, now()+ interval '45 minutes')", (room_id, room_name, owner_user_id))
         conn.commit()
     except Exception as e:
@@ -267,16 +288,19 @@ def create_room():
         cur.close()
         conn.close()
     return url_for('room',r_id=room_id)
+
 @app.route('/room/<r_id>')
 def room(r_id):
     conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
 
     try:
+        # only fetch the room if it hasn't expired yet
         cur.execute("select room_name, expires_at from rooms where room_id = %s and expires_at > now()", (r_id,))
 
         room = cur.fetchone()
 
+        # 404 if room doesn't exist or is expired
         if room is None:
             abort(404)
 
@@ -285,5 +309,6 @@ def room(r_id):
     finally:
         cur.close()
         conn.close()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
