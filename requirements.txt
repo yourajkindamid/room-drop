@@ -1,4 +1,8 @@
-Flask
+flask
+flask-socketio
 psycopg2-binary
 bcrypt
+boto3
 python-dotenv
+gunicorn
+eventlet
