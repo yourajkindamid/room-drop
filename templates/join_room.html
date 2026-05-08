@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Log in — Room Drop</title>
+  <title>Join Room — Room Drop</title>
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,16 +46,16 @@
       background: var(--sky); border-radius: 140px 140px 0 0;
       opacity: 0.6; z-index: 0;
     }
-    .deco-circle {
-      position: absolute; bottom: 12%; right: 10%; width: 120px; height: 120px;
-      background: var(--yellow); border-radius: 50%; opacity: 0.7; z-index: 0;
-    }
     .deco-square {
       position: absolute; bottom: 18%; right: 22%; width: 70px; height: 70px;
       background: var(--red); transform: rotate(15deg); z-index: 0;
     }
+    .deco-circle {
+      position: absolute; bottom: 12%; right: 10%; width: 120px; height: 120px;
+      background: var(--yellow); border-radius: 50%; opacity: 0.7; z-index: 0;
+    }
     .auth-card {
-      position: relative; z-index: 1; width: min(440px, 100%);
+      position: relative; z-index: 1; width: min(480px, 100%);
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 20px; padding: 2.5rem;
       box-shadow: 0 20px 50px rgba(26,26,26,0.06);
@@ -80,19 +80,13 @@
     input {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
       border-radius: 10px; color: var(--ink); font-family: 'Figtree', sans-serif;
-      font-size: 0.95rem; padding: 0.85rem 1rem; outline: none;
+      font-size: 1.1rem; padding: 0.95rem 1rem; outline: none;
       transition: border-color 0.2s, background 0.2s;
+      letter-spacing: 0.08em; text-transform: uppercase; text-align: center;
+      font-weight: 600;
     }
     input:focus { border-color: var(--blue); background: var(--surface); }
     .submit-btn { width: 100%; margin-top: 0.5rem; }
-    .auth-footer {
-      text-align: center; margin-top: 1.6rem;
-      font-size: 0.88rem; color: var(--muted);
-    }
-    .auth-footer a {
-      color: var(--blue); text-decoration: none; font-weight: 600;
-    }
-    .auth-footer a:hover { text-decoration: underline; }
     .flash {
       padding: 0.75rem 0.95rem; border-radius: 10px;
       font-size: 0.85rem; margin-bottom: 1.2rem; border: 1px solid;
@@ -100,10 +94,6 @@
     .flash.error {
       background: rgba(209, 71, 11, 0.08); color: var(--red);
       border-color: rgba(209, 71, 11, 0.25);
-    }
-    .flash.success {
-      background: rgba(46, 204, 113, 0.08); color: #1e8449;
-      border-color: rgba(46, 204, 113, 0.3);
     }
     @media (max-width: 768px) {
       nav { padding: 1rem 1.5rem; }
@@ -115,7 +105,11 @@
 <body>
   <nav>
     <a href="/" class="logo">Room<span>Drop</span></a>
-    <a href="/signup" class="btn btn-ghost">Sign up</a>
+    {% if logged_in %}
+      <a href="/dashboard" class="btn btn-ghost">← Dashboard</a>
+    {% else %}
+      <a href="/login" class="btn btn-ghost">Log in</a>
+    {% endif %}
   </nav>
 
   <main>
@@ -124,9 +118,9 @@
     <div class="deco-square"></div>
 
     <div class="auth-card">
-      <div class="auth-label">// welcome back</div>
-      <div class="auth-title">Log in.</div>
-      <p class="auth-sub">Access your dashboard, persistent rooms, and shared files.</p>
+      <div class="auth-label">// join existing</div>
+      <div class="auth-title">Join a Room.</div>
+      <p class="auth-sub">Enter the Room ID someone shared with you.</p>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
@@ -134,21 +128,13 @@
         {% endfor %}
       {% endwith %}
 
-      <form method="POST" action="/login">
+      <form method="POST" action="/join-room">
         <div class="form-group">
-          <label>Username or Email</label>
-          <input type="text" name="identifier" placeholder="username or you@example.com" required>
+          <label>Room ID</label>
+          <input type="text" name="room_id" placeholder="K7M9X2QP" required maxlength="20" autofocus>
         </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" name="password" placeholder="Your password" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg submit-btn">Log In →</button>
+        <button type="submit" class="btn btn-primary btn-lg submit-btn">Join Room →</button>
       </form>
-
-      <div class="auth-footer">
-        Don't have an account? <a href="/signup">Sign up</a>
-      </div>
     </div>
   </main>
 </body>

@@ -236,11 +236,11 @@
       <div class="auth-title">Join Room Drop.</div>
       <p class="auth-sub">Sign up free for persistent rooms, custom names, and higher limits.</p>
 
-      <!-- {% with messages = get_flashed_messages(with_categories=true) %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
         {% for category, message in messages %}
-          <div class="flash {{ category }}"> message </div>
-        <!-- {% endfor %}
-      {% endwith %} -->     <!-- commented this out idk what this was -->
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
 
       <form method="POST" action="/signup">
         <div class="form-group">
